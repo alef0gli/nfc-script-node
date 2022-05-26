@@ -21,7 +21,13 @@
 <button id="scanButton">Scan</button><br>
 
 <button id="writeButton">Write</button>
-<input type="text" id="myInput">
+
+<form>
+  <input type="text" class="bottiglia"   placeholder="bottiglia">
+  <input type="text" id="anno"           placeholder="anno">
+  <input type="text" id="provenienza"    placeholder="provenienza">
+</form>
+
 
 <script>
   var ChromeSamples = {
@@ -85,7 +91,7 @@ if (!("NDEFReader" in window))
 
   
     
-      <script>scanButton.addEventListener("click", async () => {
+      <script>scanButton.addEventListener("click", async () => {          
   log("User clicked scan button");
 
   try {
@@ -97,9 +103,14 @@ if (!("NDEFReader" in window))
       log("Argh! Cannot read data from the NFC tag. Try another one?");
     });
 
-    ndef.addEventListener("reading", ({ message, serialNumber }) => {
-      log(`> Serial Number: ${serialNumber}`);
-      log(`> Records: (${message.records.length})`);
+    ndef.addEventListener("reading", ( event ) => {
+      const decoder = new TextDecoder()
+      for( const record of event.message.records){
+        if (record.mediaType === "application/json") {
+          const json = JSON.parse(decoder.decode(record.data))
+         log(`${json.bottiglia} del ${json.anno} (${json.provenienza})`)
+        }
+      }
     });
   } catch (error) {
     log("Argh! " + error);
@@ -107,19 +118,34 @@ if (!("NDEFReader" in window))
 });
 
 writeButton.addEventListener("click", async () => {
-  const testo = document.getElementById('myInput')
-    console.log(testo.value)
   log("User clicked write button");
 
   try {
     const ndef = new NDEFReader();
-    await ndef.write(testo.value);                           //////////////////////////////////////////
+    
+    const encoder = new TextEncoder()
+    await ndef.write({
+      records: [
+        {
+          recordType: "mime",
+          mediaType: "application/json",
+          data: encoder.encode(JSON.stringify({
+            bottiglia: document.getElementById('bottiglia').value,
+            anno: document.getElementById('anno').value,
+            provenienza: document.getElementById('provenienza').value
+          }))
+        }
+      ]
+    });                         
     log("> Message written");
   } catch (error) {
     log("Argh! " + error);
   }
 });
+
+
 </script>
+
   
 
 </body></html>
